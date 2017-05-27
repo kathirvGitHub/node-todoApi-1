@@ -1,6 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 const { ObjectID } = require('mongodb');
+var lodash = require('lodash');
 
 
 var { mongoose } = require('./db/mongoose');
@@ -51,8 +52,48 @@ app.get('/todos/:id', (req, res) => {
 
 })
 
+app.delete('/todos/:id', (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) {
+        res.status(400).send({ error: 'Invalid ID' });
+    }
+    else {
+        Todo.findByIdAndRemove(req.params.id).then((todos) => {
+            if (!todos) {
+                return res.status(400).send({ error: 'Invalid ID' });
+            }
+            res.send({
+                todos,
+                status: 'Removed'
+            });
+        }, (e) => {
+            res.status(400).send(e);
+        });
+    }
+
+})
+
+app.patch('/todos/:id', (req, res) => {
+    var updateBody = lodash.pick(req.body, ['text', 'completed']);
+
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).send({ error: 'Invalid ID' });
+    }
+
+    Todo.findByIdAndUpdate(req.params.id, { $set: updateBody }, { new: true }).then((todo) => {
+        if (!todo) {
+            return res.status(400).send({ error: 'Invalid ID' });
+        }
+        res.send({
+            todo,
+            status: 'Updated'
+        });
+    }).catch((e) => {
+        res.status(400).send(e);
+    })
+})
+
 app.listen(port, () => {
-    console.log (`Server is running on port ${port}`)
+    console.log(`Server is running on port ${port}`)
 });
 
 
