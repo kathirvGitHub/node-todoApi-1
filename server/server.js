@@ -92,6 +92,22 @@ app.patch('/todos/:id', (req, res) => {
     })
 })
 
+app.post('/users', (req, res) => {    
+
+    var userBody = lodash.pick(req.body, ['email', 'password']);
+
+    var newUser = new User(userBody);
+
+    newUser.save().then((userDoc) => {
+        return userDoc.generateAuthToken();
+        // res.send(doc);
+    }).then((token) => {
+        res.header('x-auth', token).send({newUser,token});
+    }).catch ( (e) => {
+        res.status(400).send(e);
+    });
+})
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`)
 });

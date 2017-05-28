@@ -1,26 +1,71 @@
-var mongoose = require ('mongoose');
+const validator = require('validator');
+var mongoose = require('mongoose');
+const jwt = require ('jsonwebtoken');
+const lodash = require ('lodash')
 
-var User = mongoose.model('User', {
-    name: {
-        type : String,
-        required : true,
-        trim : true,
-        minlength : 1
-    },
-    email : {
-        type : String,
-        required : true,
-        trim : true,
-        minlength : 1
-    },
-    password : {
-        type : String,
-        trim : true,
-        minlength : 1
-    }
-});
+// UserModel = {
+//     email : 'kpa@forzaconsulting.eu',
+//     password : 'some password string',
+//     tokens : [{
+//         access : 'token type',
+//         token : 'token value'
+//     }]
+// }
 
-module.exports = {User};
+var UserSchema = new mongoose.Schema({
+    email: {
+        type: String,
+        required: true,
+        trim: true,
+        minlength: 1,
+        unique: true,
+        validate: {
+            validator: (value) => {
+                return validator.isEmail(value);
+            },
+            message: '{VALUE} not a valid email'
+        }
+    },
+    password: {
+        type: String,
+        required: true,
+        trim: true,
+        minlength: 8
+    },
+    tokens: [{
+        access: {
+            type: String,
+            required: true,
+        },
+        token: {
+            type: String,
+            required: true,
+        }
+    }]
+})
+
+UserSchema.methods.toJSON = function () {
+    var user = this;
+    var userObject = user.toObject();
+
+    return lodash.pick(userObject, ['id', 'email']);
+}
+
+UserSchema.methods.generateAuthToken = function () {
+    var user = this;
+    var access = 'auth';
+    var token = jwt.sign({_id : user._id.toHexString(), access}, 'kathirvSecret').toString();
+
+    user.tokens.push({access, token});
+
+    return user.save().then(() => {
+        return token;   
+    });
+};
+
+var User = mongoose.model('User', UserSchema);
+
+module.exports = { User };
 
 // var newUser = new User({
 //     name : 'Karthikeyan',
